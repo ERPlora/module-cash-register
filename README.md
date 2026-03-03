@@ -326,7 +326,7 @@ cash_register/
 ## Stack Tecnológico
 
 ### Backend
-- Django 5.1+
+- Django 6.0+
 - Solo-models para singleton config
 - DecimalField para precisión monetaria
 

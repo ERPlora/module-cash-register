@@ -27,3 +27,26 @@ PERMISSIONS = [
     'cash_register.view_reports',
     'cash_register.manage_settings',
 ]
+
+ROLE_PERMISSIONS = {
+    "admin": ["*"],
+    "manager": [
+        "add_count",
+        "add_movement",
+        "add_session",
+        "close_session",
+        "view_count",
+        "view_movement",
+        "view_reports",
+        "view_session",
+    ],
+    "employee": [
+        "add_count",
+        "add_movement",
+        "add_session",
+        "close_session",
+        "view_count",
+        "view_movement",
+        "view_session",
+    ],
+}
