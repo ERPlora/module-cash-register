@@ -4,6 +4,8 @@ MODULE_ID = 'cash_register'
 MODULE_NAME = _('Cash Register')
 MODULE_VERSION = '1.0.0'
 
+MIDDLEWARE = 'middleware.CashRegisterMiddleware'
+
 MENU = {
     'label': _('Cash Register'),
     'icon': 'cash-outline',
