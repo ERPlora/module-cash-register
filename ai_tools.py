@@ -231,3 +231,160 @@ class CloseCashSession(AssistantTool):
             "difference": str(session.difference),
             "closed": True,
         }
+
+
+@register_tool
+class OpenCashSession(AssistantTool):
+    name = "open_cash_session"
+    description = "Open a new cash register session with an opening balance."
+    module_id = "cash_register"
+    required_permission = "cash_register.add_cashsession"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "register_id": {"type": "string", "description": "Cash register UUID"},
+            "opening_balance": {"type": "number", "description": "Starting cash amount in the drawer"},
+            "notes": {"type": "string", "description": "Optional opening notes"},
+        },
+        "required": ["register_id", "opening_balance"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        from decimal import Decimal
+        from cash_register.models import CashSession
+        session = CashSession.objects.create(
+            register_id=args['register_id'],
+            user=request.user,
+            opening_balance=Decimal(str(args['opening_balance'])),
+            notes=args.get('notes', ''),
+            status='open',
+        )
+        return {"id": str(session.id), "session_number": session.session_number, "opened": True}
+
+
+@register_tool
+class AddCashMovement(AssistantTool):
+    name = "add_cash_movement"
+    description = "Add a cash movement (in/out) to an open session."
+    module_id = "cash_register"
+    required_permission = "cash_register.change_cashsession"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string", "description": "Cash session UUID"},
+            "movement_type": {"type": "string", "description": "in, out, sale, refund"},
+            "amount": {"type": "number", "description": "Amount (positive)"},
+            "description": {"type": "string", "description": "Reason for the movement"},
+        },
+        "required": ["session_id", "movement_type", "amount"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        from decimal import Decimal
+        from cash_register.models import CashSession, CashMovement
+        try:
+            session = CashSession.objects.get(id=args['session_id'])
+        except CashSession.DoesNotExist:
+            return {"error": "Session not found"}
+        if session.status != 'open':
+            return {"error": "Session is not open"}
+        movement = CashMovement.objects.create(
+            session=session,
+            movement_type=args['movement_type'],
+            amount=Decimal(str(args['amount'])),
+            description=args.get('description', ''),
+        )
+        return {"id": str(movement.id), "type": movement.movement_type, "amount": str(movement.amount), "created": True}
+
+
+@register_tool
+class DeleteCashMovement(AssistantTool):
+    name = "delete_cash_movement"
+    description = "Delete a cash movement from an open session (correction)."
+    module_id = "cash_register"
+    required_permission = "cash_register.change_cashsession"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "movement_id": {"type": "string", "description": "CashMovement UUID"},
+        },
+        "required": ["movement_id"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        from cash_register.models import CashMovement
+        try:
+            m = CashMovement.objects.select_related('session').get(id=args['movement_id'])
+        except CashMovement.DoesNotExist:
+            return {"error": "Movement not found"}
+        if m.session.status != 'open':
+            return {"error": "Cannot delete movements from a closed session"}
+        m.delete()
+        return {"deleted": True}
+
+
+@register_tool
+class UpdateCashRegister(AssistantTool):
+    name = "update_cash_register"
+    description = "Update a cash register's name or active status."
+    module_id = "cash_register"
+    required_permission = "cash_register.change_cashregister"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "register_id": {"type": "string", "description": "CashRegister UUID"},
+            "name": {"type": "string"},
+            "is_active": {"type": "boolean"},
+        },
+        "required": ["register_id"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        from cash_register.models import CashRegister
+        try:
+            r = CashRegister.objects.get(id=args['register_id'])
+        except CashRegister.DoesNotExist:
+            return {"error": "Register not found"}
+        if 'name' in args:
+            r.name = args['name']
+        if 'is_active' in args:
+            r.is_active = args['is_active']
+        r.save()
+        return {"id": str(r.id), "name": r.name, "updated": True}
+
+
+@register_tool
+class DeleteCashRegister(AssistantTool):
+    name = "delete_cash_register"
+    description = "Delete a cash register. Must not have open sessions."
+    module_id = "cash_register"
+    required_permission = "cash_register.delete_cashregister"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "register_id": {"type": "string", "description": "CashRegister UUID"},
+        },
+        "required": ["register_id"],
+        "additionalProperties": False,
+    }
+
+    def execute(self, args, request):
+        from cash_register.models import CashRegister
+        try:
+            r = CashRegister.objects.get(id=args['register_id'])
+        except CashRegister.DoesNotExist:
+            return {"error": "Register not found"}
+        if r.sessions.filter(status='open').exists():
+            return {"error": "Register has open sessions. Close them first."}
+        name = r.name
+        r.delete()
+        return {"deleted": True, "name": name}
