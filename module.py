@@ -2,7 +2,11 @@ from django.utils.translation import gettext_lazy as _
 
 MODULE_ID = 'cash_register'
 MODULE_NAME = _('Cash Register')
-MODULE_VERSION = '1.0.0'
+MODULE_VERSION = '1.0.1'
+MODULE_ICON = 'cash-outline'
+MODULE_DESCRIPTION = _('Cash register operations, shifts, and cash counts')
+MODULE_AUTHOR = 'ERPlora'
+MODULE_CATEGORY = 'pos'
 
 MIDDLEWARE = 'middleware.CashRegisterMiddleware'
 
