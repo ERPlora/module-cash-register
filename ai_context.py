@@ -62,3 +62,34 @@ CONTEXT = """
 - CashSession → CashCount (denomination records)
 - CashMovement.sale_reference → sales.Sale.sale_number
 """
+
+SOPS = [
+    {
+        "id": "open_shift",
+        "triggers": {
+            "es": ["abrir turno", "abrir caja", "empezar día", "iniciar turno", "empezar turno"],
+            "en": ["open shift", "start day", "open register", "start shift", "begin shift"],
+        },
+        "description": {"es": "Abrir turno de trabajo", "en": "Open work shift"},
+        "steps": [
+            {"tool": "open_cash_session", "description": "Open cash register with starting balance"},
+            {"tool": "get_sales_summary", "args": {"period": "yesterday"}, "description": "Review yesterday's sales"},
+            {"tool": "list_reservations", "args": {"date": "today"}, "description": "Check today's reservations"},
+        ],
+        "modules_required": ["cash_register"],
+    },
+    {
+        "id": "close_shift",
+        "triggers": {
+            "es": ["cerrar turno", "cerrar caja", "terminar día", "arqueo", "cuadrar caja"],
+            "en": ["close shift", "close register", "end day", "cash count", "balance register"],
+        },
+        "description": {"es": "Cerrar turno y arqueo de caja", "en": "Close shift and cash count"},
+        "steps": [
+            {"tool": "get_cash_session_summary", "description": "Get current session summary with expected vs actual"},
+            {"tool": "close_cash_session", "description": "Close session with final cash count"},
+            {"tool": "get_sales_summary", "args": {"period": "today"}, "description": "Review today's sales total"},
+        ],
+        "modules_required": ["cash_register"],
+    },
+]
