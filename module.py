@@ -7,6 +7,7 @@ MODULE_ICON = 'cash-outline'
 MODULE_DESCRIPTION = _('Cash register operations, shifts, and cash counts')
 MODULE_AUTHOR = 'ERPlora'
 MODULE_CATEGORY = 'pos'
+HAS_MODELS = True
 
 MIDDLEWARE = 'middleware.CashRegisterMiddleware'
 
